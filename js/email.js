@@ -1,45 +1,68 @@
-// объект email с методами 
-// create (подгрузить html и вызвать методы stylize и required: см.ниже)
+﻿// объект email с методами 
+// create (подгрузить html, создать свойства объекта(elem и др.), вызвать методы стилизации и обработчики)
 // destroy (удалить элемент)
 // stylize (стилизовать в соответствии с найтройками)
-// required (вставить звездочку если в настройках required.value == true)
+// markAsRequired (вставить звездочку если в настройках required.value == true)
 // _validate (проверить maxlenght)
-// submit (обработчик события сабмит для формы, который вызывает validate)
+// putNewValue (сбросить сообщение об ошибке и стиль ошибки)
+// onSubmit (обработчик события сабмит для формы, который вызывает validate)
 var email = {
+	$elem: null,
+	$message: null,
+	$icon: null,
 	create: function(){
 		$.get("../html/email.html", function(htmlCode){
 			$("form").append(htmlCode);
-			email.required();
+			email.$elem = $("#email");
+			email.$message = $(".email-message");
+			email.$icon = $(".email-icon")
+			email.markAsRequired();
 			email.stylize();
+			email.onSubmit();
+			email.putNewValue();
+			if (emailOptions.validation.required.value) {
+				email.markAsRequired();
+			}
 		});
+		
 	},
 	destroy: function(){
 		$(".email-group").remove();
+		this.$elem = null;
+		this.$message = null;
+		this.$icon = null;
 	},
 	stylize: function(){
-		$("#email").css(emailOptions.styles.input);
-		$(".email-message").css(emailOptions.styles.message);
-		$(".glyphicon-star").css(emailOptions.styles.star)
+		this.$elem.css(emailOptions.styles.input);
+		this.$message.css(emailOptions.styles.message);
 	},
-	required: function() {
-		$("#email").ready(function(){
-			var reqIcon = $("<span class='glyphicon glyphicon-star form-control-feedback'></span>");
-			if (emailOptions.validation.required.value) {
-				$("#email").after(reqIcon);
-			}
-		});	
+	markAsRequired: function() {
+		this.$icon.addClass("glyphicon-star").css({"color":"blue"});
 	},
 	_validate: function(){
-		var emailBox = $("#email");
-		var emailMessage = $(".email-message");
-		if( emailBox.val().length > emailOptions.validation.maxlength.value ){
-			emailMessage.text(emailOptions.validation.maxlength.message);
+		if( this.$elem.val().length > emailOptions.validation.maxlength.value ) {
+			this.$message.text(emailOptions.validation.maxlength.message);
+			this.$elem.parent().addClass("has-error");
+			this.$icon.addClass("glyphicon-remove").css({"color":"red"});
 			return false;
-		}else{
+		} else {
+			this.$elem.parent().addClass("has-success");
+			this.$icon.addClass("glyphicon-ok").css({"color":"green"});
 			return true;
+
 		}
 	},
-	submit: function(){
+	putNewValue: function() {
+		this.$elem.on("keydown", function() {
+			$(this).parent().removeClass("has-error has-success");
+			email.$icon.removeClass("glyphicon-ok glyphicon-remove");
+			email.$message.empty();
+			if (emailOptions.validation.required.value) {
+				email.markAsRequired();
+			}
+		});
+	},
+	onSubmit: function() {
 		$("form").on("submit", function(event){
 		event.preventDefault();
 		email._validate();
@@ -52,7 +75,8 @@ var email = {
 var emailOptions = {
 	validation: {
 		required: {
-			value: true
+			value: true,
+			message: "E-mail is required"
 		},
 		maxlength: {
 			value: 8,
@@ -61,14 +85,11 @@ var emailOptions = {
 	},
 	styles: {
 		input: {
-			"background": "#ccc",
+			"background": "#F2F2F2",
 			"font-weight": "bold"
 		},
 		message: {
 			"color": "red"
-		},
-		star: {
-			"color": "blue"
 		}
 	}
 }
