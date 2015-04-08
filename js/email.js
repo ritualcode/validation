@@ -7,20 +7,24 @@
 // putNewValue (сбросить сообщение об ошибке и стиль ошибки)
 // onSubmit (обработчик события сабмит для формы, который вызывает validate)
 var email = {
-	$elem: null,
-	$message: null,
-	$icon: null,
+	$elem:       null,
+	$message:    null,
+	$icon:       null,
+	$elemParent: null,
 	create: function(){
 		$.get("../html/email.html", function(htmlCode){
 			$("form").append(htmlCode);
 			email.$elem = $("#email");
 			email.$message = $(".email-message");
 			email.$icon = $(".email-icon")
-			email.markAsRequired();
+			email.$elemParent = $(".email-group");
 			email.stylize();
-			email.onSubmit();
-			email.putNewValue();
-			if (emailOptions.validation.required.value) {
+			email.bindListeners();
+			if (
+			     emailOptions.validation &&
+			     emailOptions.validation.required && 
+			     emailOptions.validation.required.value
+			    ) {
 				email.markAsRequired();
 			}
 		});
@@ -31,6 +35,7 @@ var email = {
 		this.$elem = null;
 		this.$message = null;
 		this.$icon = null;
+		this.$elemParent = null;
 	},
 	stylize: function(){
 		this.$elem.css(emailOptions.styles.input);
@@ -39,34 +44,62 @@ var email = {
 	markAsRequired: function() {
 		this.$icon.addClass("glyphicon-star").css({"color":"blue"});
 	},
-	_validate: function(){
+	_validateMaxlength: function(){
 		if( this.$elem.val().length > emailOptions.validation.maxlength.value ) {
 			this.$message.text(emailOptions.validation.maxlength.message);
-			this.$elem.parent().addClass("has-error");
+			this.$elemParent.addClass("has-error");
 			this.$icon.addClass("glyphicon-remove").css({"color":"red"});
 			return false;
 		} else {
-			this.$elem.parent().addClass("has-success");
+			this.$elemParent.addClass("has-success");
 			this.$icon.addClass("glyphicon-ok").css({"color":"green"});
 			return true;
 
 		}
 	},
-	putNewValue: function() {
-		this.$elem.on("keydown", function() {
-			$(this).parent().removeClass("has-error has-success");
-			email.$icon.removeClass("glyphicon-ok glyphicon-remove");
-			email.$message.empty();
-			if (emailOptions.validation.required.value) {
-				email.markAsRequired();
+	_validateRequired: function(){
+		if(
+			emailOptions.validation &&
+			emailOptions.validation.required && 
+			emailOptions.validation.required.value &&
+			this.$elem.val() == ""
+			) {
+			this.$message.text(emailOptions.validation.required.message);
+			this.$elemParent.addClass("has-error");
+			this.$icon.addClass("glyphicon-remove").css({"color":"red"});
+			return false
+		} else {
+			this.$elemParent.addClass("has-success");
+			this.$icon.addClass("glyphicon-ok").css({"color":"green"});
+			return true;
+		}
+	},
+	hideErrorMessages: function() {
+		email.$elemParent.removeClass("has-error has-success");
+		email.$icon.removeClass("glyphicon-ok glyphicon-remove");
+		email.$message.empty();
+		if (emailOptions.validation.required.value) {
+			email.markAsRequired();
+		}
+	},
+	bindSubmit: function() {
+		$("form").on("submit", function(event){
+			event.preventDefault();
+			if (email.$message.text()) {
+				email.$message.empty();
+			}
+			email._validateRequired();
+			if(email._validateRequired()) {
+				email._validateMaxlength();
 			}
 		});
 	},
-	onSubmit: function() {
-		$("form").on("submit", function(event){
-		event.preventDefault();
-		email._validate();
-		});
+	bindHideErrors: function() {
+		this.$elem.on(passwordOptions.hideErrorsOnEvent, this.hideErrorMessages);
+	},
+	bindListeners: function() {
+		this.bindSubmit();
+		this.bindHideErrors();
 	}
 }
 
@@ -91,5 +124,6 @@ var emailOptions = {
 		message: {
 			"color": "red"
 		}
-	}
+	},
+	hideErrorsOnEvent: "keydown"
 }
